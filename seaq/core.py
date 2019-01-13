@@ -1,6 +1,7 @@
 import pandas as pd
 import sqlite3
 import pkg_resources
+import re
 
 PANDA_TYPES = {
     'float64': 'numeric',
@@ -24,10 +25,24 @@ def convert_panda_dtype(dtype):
 
 
 def cast(x):
-    if type(x) in (int, str, float):
+    if type(x) in (int, float, str):
         return x
     if hasattr(x, '_repr_base'):
         return x._repr_base
+
+
+re_datetime = re.compile(r"\d{4}-\d{2}-\d{2}( \d{2}:\d{2}:\d{2}(\.\d+)?)?")
+
+
+def cast_series(series: pd.Series):
+    if series.dtype == 'object':
+        series.dropna(inplace=True)
+        if all(re_datetime.match(x) for x in series):
+            return series.astype('datetime64[ns]')
+        else:
+            return series
+    else:
+        return series
 
 
 class SeaQuill:
@@ -40,7 +55,7 @@ class SeaQuill:
     def __del__(self):
         self.conn.close()
 
-    def to_table(self, obj: pd.DataFrame, table_name):
+    def to_db(self, obj: pd.DataFrame, table_name):
         # if object is not a pandas data frame, try to coerce it to one
         obj = obj if type(obj) is pd.DataFrame else pd.DataFrame(obj)
 
@@ -49,30 +64,7 @@ class SeaQuill:
         column_names = list(obj)
         self.create_table(table_name, column_names, data_types)
         self.insert(obj, table_name)
-        self.write_metadata(obj, table_name)
-
         self.commit()
-
-    def write_metadata(self, object, table_name):
-        self.curr.execute("DELETE FROM sq_meta_data WHERE table_name = :table_name ",
-                          {'table_name': table_name})
-        next_id = self.curr.execute("SELECT max(id) FROM sq_meta_data").fetchall()[0][0]
-        self.curr.fetchall()
-        next_id = next_id + 1 if next_id else 1
-        n = len(object.dtypes)
-        if type(object) is pd.DataFrame:
-            meta_data = {
-                'id': list(range(next_id, next_id+n)),
-                'table_name': [table_name] * n,
-                'column_name': self.table_columns(table_name),
-                'original_dtype': [str(x) for x in object.dtypes]
-            }
-            df = pd.DataFrame(meta_data)
-            self.insert(df, 'sq_meta_data')
-
-    def read_metadata(self, table_name):
-        sql = "SELECT * FROM sq_meta_data WHERE table_name = :table_name"
-        return self.get_query(sql, {'table_name': table_name})
 
     def get_query(self, query: str, params=(), as_data_frame=True):
         self.curr.execute(query, params)
@@ -117,9 +109,11 @@ class SeaQuill:
         sql = "SELECT * FROM {table_name}".format(table_name=table_name)
         sql += " LIMIT {limit}".format(limit=limit) if type(limit) is int else ""
         data = self.get_query(sql)
-        meta_data = self.read_metadata(table_name)
-        dtypes = dict(zip(meta_data['column_name'], meta_data['original_dtype']))
-        for name, dtype in dtypes.items():
-            data[name] = data[name].astype(dtype)
+        for column_name in list(data):
+            data[column_name] = cast_series(data[column_name])
+        # meta_data = self.read_metadata(table_name)
+        # dtypes = dict(zip(meta_data['column_name'], meta_data['original_dtype']))
+        # for name, dtype in dtypes.items():
+        #     data[name] = data[name].astype(dtype)
 
         return data

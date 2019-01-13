@@ -1,5 +1,5 @@
 import os
-from setuptools import setup
+from setuptools import setup, find_packages
 
 
 def read(fname):
@@ -8,14 +8,15 @@ def read(fname):
 
 setup(
     name="seaq",
-    version="0.0.1",
+    version="0.0.2",
     author="Danny Beachnau",
     author_email="DannyBeachnau@gmail.com",
     description="Easily integrate pandas data frame and sqlite.",
     license="MIT",
     keywords="db pandas sqlite",
     url="http://packages.python.org/an_example_pypi_project",
-    packages=['seaq'],
+    packages=find_packages(),
+    package_data={'seaq': ['sql/*.sql']},
     install_requires=["pandas"],
-    long_description=read('README')
+    long_description=read('README.md')
 )

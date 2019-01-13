@@ -17,23 +17,9 @@ test_df = pd.DataFrame({
 class TestSeaQuill(TestCase):
     sea_quill = SeaQuill(':memory:')
 
-    def test_to_table(self):
-        self.sea_quill.to_table(test_df, 'test')
+    def test_to_db(self):
+        self.sea_quill.to_db(test_df, 'test')
         df = self.sea_quill.from_db('test')
         self.assertTrue(test_df.equals(df))
 
-    def test_metadata(self):
-        self.sea_quill.to_table(test_df, 'test')
-        metadata = self.sea_quill.read_metadata('test')
-        self.assertTrue(metadata.equals(pd.DataFrame({
-            'id': [1, 2, 3, 4, 5],
-            'table_name': ['test', 'test', 'test', 'test', 'test'],
-            'column_name': ['a', 'b', 'c', 'd', 'e'],
-            'original_dtype': ['int64', 'float64', 'object', 'datetime64[ns]', 'object']
-        })))
-
-
-sea_quill = SeaQuill('test.db')
-sea_quill.to_table(test_df, 'test')
-sea_quill.read_metadata('test')
 
