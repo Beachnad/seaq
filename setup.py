@@ -8,7 +8,7 @@ def read(fname):
 
 setup(
     name="seaq",
-    version="0.0.3",
+    version="0.0.4",
     author="Danny Beachnau",
     author_email="DannyBeachnau@gmail.com",
     description="Easily integrate pandas data frame and sqlite.",

@@ -1,5 +1,6 @@
 # Project Specific
 *.db
+update_pypi.txt
 
 # PyCharm
 .idea
